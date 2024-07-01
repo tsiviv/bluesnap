@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charSet="UTF-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Example of Content Security Policy (CSP) directives -->
+  <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://sandbox.bluesnap.com 'unsafe-inline'; connect-src 'self' http://localhost:8080"> -->
+  
   <title>BlueSnap Client</title>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/javascript" src="https://sandbox.bluesnap.com/web-sdk/5/bluesnap.js"></script>
+  
+  <!-- Load BlueSnap scripts -->
+  <!-- <script type="text/javascript" src="https://sandbox.bluesnap.com/services/web-sdk/5/bluesnap.js"></script> -->
+  <script type="text/javascript" src="https://sandbox.bluesnap.com/services/2/hosted-payment-fields/bluesnap.js"></script>
+  <script type="text/javascript" src="https://sandbox.bluesnap.com/services/hosted-payment-fields/v2.0/bluesnap.hpf.min.js"></script>
 </body>
 </html>

@@ -36,5 +36,15 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "web_accessible_resources": [
+    "https://js.stripe.com/v3/buy-button.js",
+    "https://netfree.link/injection-script/go-payment.js",
+    "https://netfree.link/injection-script/popup-card-init.js",
+    "https://netfree.link/card/card-injection.js",
+    "https://sandbox.bluesnap.com/web-sdk/5/bluesnap.js"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://sandbox.bluesnap.com https://netfree.link; object-src 'self'"
   }
 }

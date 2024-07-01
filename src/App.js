@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
@@ -13,8 +13,8 @@ const App = () => {
   const [planPrice, setPlanPrice] = useState(500);
   const [isBluesnapLoaded, setIsBluesnapLoaded] = useState(false);
   const [hostedPaymentFieldsToken, setHostedPaymentFieldsToken] = useState('');
+  const submitPaymentButtonRef = useRef(null);
 
-  // Function to save auth details to cookies
   const saveAuthDetailsToCookies = () => {
     const API_USERNAME = 'API_17193957133152076686385';
     const API_PASSWORD = 'P@ssword_Example1';
@@ -22,7 +22,6 @@ const App = () => {
     Cookies.set('api_password', API_PASSWORD, { expires: 7 });
   };
 
-  // Function to get auth headers
   const getAuthHeaders = () => {
     const API_USERNAME = Cookies.get('api_username');
     const API_PASSWORD = Cookies.get('api_password');
@@ -36,22 +35,35 @@ const App = () => {
 
   useEffect(() => {
     saveAuthDetailsToCookies();
-    const checkBluesnapLoaded = () => {
-      if (window.bluesnap) {
+    const loadBluesnapSDK = async () => {
+      const script = document.createElement('script');
+      script.src = 'https://sandbox.bluesnap.com/web-sdk/latest/bluesnap.js';
+      script.async = true;
+      script.onload = () => {
         setIsBluesnapLoaded(true);
-      } else {
-        setTimeout(checkBluesnapLoaded, 100);
-      }
+      };
+      document.body.appendChild(script);
     };
-    checkBluesnapLoaded();
+
+    loadBluesnapSDK();
     updatePlansList();
   }, []);
+
+  useEffect(() => {
+    if (submitPaymentButtonRef.current) {
+      submitPaymentButtonRef.current.addEventListener('click', handleSubmitPayment);
+    }
+    return () => {
+      if (submitPaymentButtonRef.current) {
+        submitPaymentButtonRef.current.removeEventListener('click', handleSubmitPayment);
+      }
+    };
+  }, [isBluesnapLoaded]);
 
   const updatePlansList = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
-      const data = response.data;
-      setPlans(data.plans);
+      setPlans(response.data.plans);
     } catch (error) {
       console.error('Error fetching plans:', error);
     }
@@ -61,12 +73,7 @@ const App = () => {
     e.preventDefault();
     const newPlanName = e.target.elements.planName.value;
     const newPlanPrice = e.target.elements.planPrice.value;
-    
-    if (planName !== newPlanName || planPrice !== newPlanPrice) {
-      setPlanName(newPlanName);
-      setPlanPrice(newPlanPrice);
-    }
-    
+
     const request = {
       "chargeFrequency": "MONTHLY",
       "name": newPlanName,
@@ -76,10 +83,7 @@ const App = () => {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/plans`, request, { headers: getAuthHeaders(), withCredentials: true });
-      const data = response.data;
-      setResponse(data);
-      setPlans([data, ...plans]); // Update plans state
-
+      setResponse(response.data);
       updatePlansList();
     } catch (error) {
       console.error('Error creating plan:', error);
@@ -90,25 +94,51 @@ const App = () => {
     e.preventDefault();
 
     try {
-      // Step 1: Obtain Payment Token from BlueSnap (Server-side)
-      const tokenResponse = await axios.post(`${API_BASE_URL}/token`, { headers: getAuthHeaders(), });
-
-      // Extract the Hosted Payment Fields token from the Location header
-      const locationHeader = tokenResponse.headers['location'];
-
-      console.log(locationHeader)
-      const hostedFieldTokenId = locationHeader.split('/').pop(); // Extract the token ID from the URL
+      // Step 1: Obtain the Hosted Payment Fields Token
+      const tokenResponse = await axios.post(`${API_BASE_URL}/token`, {}, { headers: getAuthHeaders() });
+      const locationHeader = tokenResponse.data.tokenLocation;
+      const hostedFieldTokenId = locationHeader.split('/').pop();
       setHostedPaymentFieldsToken(hostedFieldTokenId);
 
-      // Step 2: Ensure `bluesnap` is available in the global scope
-      if (isBluesnapLoaded) {
-        window.bluesnap.securedPaymentCollectorSetup(hostedFieldTokenId, function (sdkResponse) {
-          if (sdkResponse.code === 1) {
-            // Step 3: Data submission was a success
-            // Extract encrypted credit card data from Secured Payment Collector
-            const encryptedData = sdkResponse.token;
+      // Step 2: Check if Bluesnap SDK is loaded
+      if (isBluesnapLoaded && window.bluesnap) {
+        // Step 3: Set up secured payment collection with Bluesnap SDK
+          window.bluesnap.hostedPaymentFieldsCreate({
+            token: hostedFieldTokenId,
+            onFieldEventHandler: {
+              onFocus: (tagId) => {
+                console.log('focus ' + tagId);
+              },
+              onBlur: (tagId) => {
+                console.log('blur ' + tagId);
+              },
+              onError: (tagId, error) => {
+                console.error('error ' + tagId + ': ' + JSON.stringify(error));
+              },
+              onType: (tagId, inputData) => {
+                console.log('type ' + tagId + ': ' + JSON.stringify(inputData));
+              }
+            },
+            onError: (error) => {
+              console.error('hostedPaymentFieldsCreate error: ' + JSON.stringify(error));
+            }
+          });
+        
+      } else {
+        console.error('Bluesnap SDK is not loaded');
+      }
+    } catch (error) {
+      console.error('Error obtaining payment token:', error);
+    }
+  };
 
-            // Step 4: Include encrypted credit card data in your subscription request
+  const handleSubmitPayment = () => {
+    if (isBluesnapLoaded && window.bluesnap) {
+      if (window.bluesnap.hostedPaymentFields) {
+        window.bluesnap.hostedPaymentFields.submit((submitResponse) => {
+          if (submitResponse.cardData) {
+            const encryptedData = submitResponse.cardData.encryptedCardData;
+
             const request = {
               "payerInfo": {
                 "zip": 102453,
@@ -118,7 +148,7 @@ const App = () => {
               },
               "paymentSource": {
                 "creditCardInfo": {
-                  "encryptedCardData": encryptedData // Include encrypted credit card data here
+                  "encryptedCardData": encryptedData
                 }
               },
               "planId": subscriptionPlanId,
@@ -129,28 +159,25 @@ const App = () => {
               }
             };
 
-            // Step 5: Submit subscription request to your backend
             createSubscription(request);
-
           } else {
-            // Handle errors or warnings
-            const { errors, warnings } = sdkResponse.info;
-            console.error('Payment submission error:', errors, warnings);
+            console.error('Card data not received from SDK');
           }
-        }, false);
+        }, (error) => {
+          console.error('submitData error: ' + JSON.stringify(error));
+        });
       } else {
-        console.error('Bluesnap SDK is not loaded');
+        console.error('Bluesnap hostedPaymentFields is not available');
       }
-    } catch (error) {
-      console.error('Error obtaining payment token:', error);
+    } else {
+      console.error('Bluesnap SDK is not loaded');
     }
   };
 
   const createSubscription = async (request) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/subscriptions`, request, { headers: getAuthHeaders(), withCredentials: true });
-      const data = response.data;
-      setResponse(data);
+      setResponse(response.data);
     } catch (error) {
       console.error('Error creating subscription:', error);
     }
@@ -159,8 +186,7 @@ const App = () => {
   const handleGetAllPlans = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
-      const data = response.data;
-      setPlans(data.plans);
+      setPlans(response.data.plans);
     } catch (error) {
       console.error('Error getting all plans:', error);
     }
@@ -170,8 +196,7 @@ const App = () => {
     e.preventDefault();
     try {
       const response = await axios.get(`${API_BASE_URL}/subscriptions/${monthlyPaymentsSubscriptionId}/payments`, { headers: getAuthHeaders(), withCredentials: true });
-      const data = response.data;
-      setResponse(data);
+      setResponse(response.data);
     } catch (error) {
       console.error('Error getting monthly payments:', error);
     }
@@ -179,16 +204,13 @@ const App = () => {
 
   return (
     <div className="App">
-      <script type="text/javascript" src="https://sandbox.bluesnap.com/web-sdk/5/bluesnap.js"></script>
-
       <h1>BlueSnap Client</h1>
       <h2>Create Plan</h2>
       <form onSubmit={handleCreatePlan}>
-        <input type="text" name="planName" placeholder="Plan Name" value={planName} required />
-        <input type="number" name="planPrice" placeholder="Plan Price" value={planPrice} required />
+        <input type="text" name="planName" placeholder="Plan Name" value={planName} onChange={(e) => setPlanName(e.target.value)} required />
+        <input type="number" name="planPrice" placeholder="Plan Price" value={planPrice} onChange={(e) => setPlanPrice(e.target.value)} required />
         <button type="submit">Create Plan</button>
       </form>
-
       <h2>Create Subscription</h2>
       <form onSubmit={handleCreateSubscription}>
         <label htmlFor="subscriptionPlan">Select Plan:</label>
@@ -198,21 +220,23 @@ const App = () => {
             <option key={plan.id} value={plan.id}>{plan.name}</option>
           ))}
         </select>
+        <div data-bluesnap="ccn"></div>
+        <div data-bluesnap="exp"></div>
+        <div data-bluesnap="cvv"></div>
         <button type="submit">Create Subscription</button>
       </form>
-
+      <button ref={submitPaymentButtonRef} id="submitPayment">Submit Payment</button>
       <h2>Get All Plans</h2>
       <button onClick={handleGetAllPlans}>Get All Plans</button>
-
       <h2>Get Monthly Payments</h2>
       <form onSubmit={handleGetMonthlyPayments}>
         <input type="text" value={monthlyPaymentsSubscriptionId} onChange={(e) => setMonthlyPaymentsSubscriptionId(e.target.value)} placeholder="Subscription ID" required />
         <button type="submit">Get Monthly Payments</button>
       </form>
-
-      <div id="response">
+      {response && <div>
+        <h3>Response:</h3>
         <pre>{JSON.stringify(response, null, 2)}</pre>
-      </div>
+      </div>}
     </div>
   );
 };
