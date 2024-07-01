@@ -7,6 +7,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
 //   if (!isOpen) return null;
   const API_BASE_URL = 'http://localhost:8080/api'; // Ensure this matches your server's address
   const [hostedPaymentFieldsToken, setHostedPaymentFieldsToken] = useState('');
+  const [exp,setexp]=useState("")
   const saveAuthDetailsToCookies = () => {
     const API_USERNAME = 'API_17193957133152076686385';
     const API_PASSWORD = 'P@ssword_Example1';
@@ -39,12 +40,12 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
       const locationHeader = tokenResponse.data.tokenLocation;
       const hostedFieldTokenId = locationHeader.split('/').pop();
       setHostedPaymentFieldsToken(hostedFieldTokenId);
-
       // Step 2: Check if Bluesnap SDK is loaded
       if (isBluesnapLoaded && window.bluesnap) {
         // Step 3: Set up secured payment collection with Bluesnap SDK
         console.log(hostedFieldTokenId)
         window.bluesnap.hostedPaymentFieldsCreate({
+          
           token: hostedFieldTokenId,
           onFieldEventHandler: {
             onFocus: (tagId) => {
@@ -77,7 +78,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
 
   const handleSubmitPayment = (e) => {
     e.preventDefault()
-    console.log("handleSubmitPayment")
+    console.log(exp)
     if (window.bluesnap && window.bluesnap.hostedPaymentFieldsSubmitData) {
       window.bluesnap.hostedPaymentFieldsSubmitData((submitResponse) => {
         console.log('Submission callback executed');
@@ -121,6 +122,10 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
       console.error('Bluesnap SDK is not loaded or function not available');
     }
   };
+  function s(e){
+    console.log(s)
+    setexp(e)
+  }
   if (!isOpen) {
     return null; // Return null if isOpen is false to exit the component
   }
@@ -128,7 +133,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
     <div className="modal-overlay">
       <div className="modal-content">
       <form onSubmit={handleSubmitPayment}>
-        <div data-bluesnap="ccn"></div>
+        <div data-bluesnap="ccn"  ></div>
         <div data-bluesnap="exp"></div>
         <div data-bluesnap="cvv"></div>
         <button data-bluesnap="submitButton" type="submit" id="submit-button">Pay Now</button>
@@ -136,6 +141,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
         <button className="close-button" onClick={closeModal}>×</button>
         {children}
       </div>
+      
     </div>
   );
 };

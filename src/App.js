@@ -38,6 +38,7 @@ const App = () => {
 
   useEffect(() => {
     saveAuthDetailsToCookies();
+    console.log("before")
     const loadBluesnapSDK = async () => {
       const script = document.createElement('script');
       script.src = 'https://sandbox.bluesnap.com/web-sdk/latest/bluesnap.js';
