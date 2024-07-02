@@ -3,11 +3,12 @@ import './Modal.css'; // Make sure to create a CSS file to style your modal
 import Cookies from 'js-cookie';
 import axios from 'axios';
 
-const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoaded }) => {
+const Modal = ({ isOpen, closeModal, children,subscriptionPlanId }) => {
 //   if (!isOpen) return null;
   const API_BASE_URL = 'http://localhost:8080/api'; // Ensure this matches your server's address
   const [hostedPaymentFieldsToken, setHostedPaymentFieldsToken] = useState('');
   const [exp,setexp]=useState("")
+  const [isBluesnapLoaded, setIsBluesnapLoaded] = useState(false);
   const saveAuthDetailsToCookies = () => {
     const API_USERNAME = 'API_17193957133152076686385';
     const API_PASSWORD = 'P@ssword_Example1';
@@ -26,11 +27,31 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
     };
   };
   useEffect(() => {
-    if (isOpen) {
-        console.log(subscriptionPlanId)
-      handleCreateSubscription();
-    }
+    console.log(isOpen)
+    if (isOpen){
+    saveAuthDetailsToCookies();
+  
+    const loadBluesnapSDK = async () => {
+      try {
+        const script = document.createElement('script');
+        script.src = 'https://sandbox.bluesnap.com/web-sdk/latest/bluesnap.js';
+        script.async = true;
+        script.onload = () => {
+        setIsBluesnapLoaded(true);
+        console.log(window.bluesnap)
+          // Call BlueSnap SDK functions here
+        handleCreateSubscription() 
+        };
+        script.setAttribute('nonce', window.__nonce__);
+        document.body.appendChild(script);
+      } catch (error) {
+        console.error('Failed to load BlueSnap SDK:', error);
+      }
+    };
+  
+    loadBluesnapSDK();}
   }, [isOpen]);
+  
   const handleCreateSubscription = async () => {
    
 
@@ -41,32 +62,44 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
       const hostedFieldTokenId = locationHeader.split('/').pop();
       setHostedPaymentFieldsToken(hostedFieldTokenId);
       // Step 2: Check if Bluesnap SDK is loaded
-      if (isBluesnapLoaded && window.bluesnap) {
+
+      console.log(isBluesnapLoaded)
+      if (  window.bluesnap) {
         // Step 3: Set up secured payment collection with Bluesnap SDK
         console.log(hostedFieldTokenId)
         window.bluesnap.hostedPaymentFieldsCreate({
-          
           token: hostedFieldTokenId,
+          styles: {
+            base: {
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '16px',
+              color: '#333333',
+              '::placeholder': {
+                color: '#45215'
+              }
+            },
+            invalid: {
+              color: '#ff0000'
+            }
+          },
           onFieldEventHandler: {
             onFocus: (tagId) => {
-              console.log('focus ' + tagId);
+              console.log('Focus event on field:', tagId);
             },
             onBlur: (tagId) => {
-              console.log('blur ' + tagId);
+              console.log('Blur event on field:', tagId);
             },
             onError: (tagId, error) => {
-              console.error('error  ' + tagId + ': ' + JSON.stringify(error));
+              console.error('Error on field ' + tagId + ':', error);
             },
             onType: (tagId, inputData) => {
-              console.log('type ' + tagId + ': ' + JSON.stringify(inputData));
+              console.log('User input on field ' + tagId + ':', inputData);
             }
           },
           onError: (error) => {
-            console.error('hostedPaymentFieldsCreate error: ' + JSON.stringify(error));
+            console.error('Error creating hosted payment fields:', error);
           }
         });
-       
-        
   
       } else {
         console.error('Bluesnap SDK is not loaded');
@@ -79,6 +112,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId,isBluesnapLoade
   const handleSubmitPayment = (e) => {
     e.preventDefault()
     console.log(exp)
+    console.log(window.blu)
     if (window.bluesnap && window.bluesnap.hostedPaymentFieldsSubmitData) {
       window.bluesnap.hostedPaymentFieldsSubmitData((submitResponse) => {
         console.log('Submission callback executed');

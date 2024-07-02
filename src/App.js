@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import Modal from './Modal'; // Import the Modal component
+import Modal from './Modal';
 
-const API_BASE_URL = 'http://localhost:8080/api'; // Ensure this matches your server's address
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const App = () => {
   const [plans, setPlans] = useState([]);
@@ -17,7 +17,14 @@ const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => setIsModalOpen(true);
-  const closeModal = (request) =>{ setIsModalOpen(false); if (request) {console.log(request) ;createSubscription(request)}}
+  const closeModal = (request) => {
+    setIsModalOpen(false);
+    if (request) {
+      console.log(request);
+      createSubscription(request);
+    }
+  };
+
   const saveAuthDetailsToCookies = () => {
     const API_USERNAME = 'API_17193957133152076686385';
     const API_PASSWORD = 'P@ssword_Example1';
@@ -36,33 +43,7 @@ const App = () => {
     };
   };
 
-  useEffect(() => {
-    saveAuthDetailsToCookies();
-    console.log("before")
-    const loadBluesnapSDK = async () => {
-      const script = document.createElement('script');
-      script.src = 'https://sandbox.bluesnap.com/web-sdk/latest/bluesnap.js';
-      script.async = true;
-      script.onload = () => {
-        setIsBluesnapLoaded(true);
-      };
-      document.body.appendChild(script);
-    };
-
-    loadBluesnapSDK();
-  }, []);
-
-  // useEffect(() => {
-  //   if (submitPaymentButtonRef.current) {
-  //     submitPaymentButtonRef.current.addEventListener('click', handleSubmitPayment);
-  //   }
-  //   return () => {
-  //     if (submitPaymentButtonRef.current) {
-  //       submitPaymentButtonRef.current.removeEventListener('click', handleSubmitPayment);
-  //     }
-  //   };
-  // }, [isBluesnapLoaded]);
-
+ 
   const updatePlansList = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
@@ -70,8 +51,9 @@ const App = () => {
       console.error('Error fetching plans:', error);
     }
   };
+
   const createSubscription = async (request) => {
-    console.log("createSubscription",request,subscriptionPlanId)
+    console.log("createSubscription", request, subscriptionPlanId);
     try {
       const response = await axios.post(`${API_BASE_URL}/subscriptions`, request, { headers: getAuthHeaders(), withCredentials: true });
       setResponse(response.data);
@@ -95,19 +77,15 @@ const App = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/plans`, request, { headers: getAuthHeaders(), withCredentials: true });
       setResponse(response.data);
-      setPlans([...plans , response.data]);
+      setPlans([...plans, response.data]);
     } catch (error) {
       console.error('Error creating plan:', error);
     }
   };
 
-  
-  
-
   const handleGetAllPlans = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
-      // setPlans(response.data.plans);
     } catch (error) {
       console.error('Error getting all plans:', error);
     }
@@ -122,6 +100,7 @@ const App = () => {
       console.error('Error getting monthly payments:', error);
     }
   };
+
   return (
     <div className="App">
       <h1>BlueSnap Client</h1>
@@ -132,19 +111,18 @@ const App = () => {
         <button type="submit">Create Plan</button>
       </form>
       <h2>Create Subscription</h2>
-      <form >
+      <form>
         <label htmlFor="subscriptionPlan">Select Plan:</label>
         <select id="subscriptionPlan" value={subscriptionPlanId} onChange={(e) => setSubscriptionPlanId(e.target.value)}>
-        <option value="">Select a plan</option>
-        {plans?.map(plan => (
-        <option key={plan.planId} value={plan.planId}>{plan.name}</option>
-         ))}
-        </select><br></br>
-
+          <option value="">Select a plan</option>
+          {plans?.map(plan => (
+            <option key={plan.planId} value={plan.planId}>{plan.name}</option>
+          ))}
+        </select>
+        <br />
       </form>
-      {subscriptionPlanId&&<button onClick={openModal}>Open Payment Form</button>}
-      <Modal isOpen={isModalOpen} closeModal={closeModal} subscriptionPlanId={subscriptionPlanId} isBluesnapLoaded={isBluesnapLoaded}/>
-      
+      {subscriptionPlanId && <button onClick={openModal}>Open Payment Form</button>}
+      <Modal isOpen={isModalOpen} closeModal={closeModal} subscriptionPlanId={subscriptionPlanId} isBluesnapLoaded={isBluesnapLoaded} />
       <h2>Get All Plans</h2>
       <button onClick={handleGetAllPlans}>Get All Plans</button>
       <h2>Get Monthly Payments</h2>
