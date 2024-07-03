@@ -3,7 +3,6 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import Modal from './Modal';
 
-const API_BASE_URL = 'http://localhost:8080/api';
 
 const App = () => {
   const [plans, setPlans] = useState([]);
@@ -24,7 +23,12 @@ const App = () => {
       createSubscription(request);
     }
   };
-
+  const axiosInstance = axios.create({
+    baseURL: 'https://localhost:443/api', // Replace with your server's base URL
+    timeout: 5000, // Timeout in milliseconds
+    withCredentials: true, // Include cookies in CORS requests
+    
+  });
   const saveAuthDetailsToCookies = () => {
     const API_USERNAME = 'API_17193957133152076686385';
     const API_PASSWORD = 'P@ssword_Example1';
@@ -46,7 +50,7 @@ const App = () => {
  
   const updatePlansList = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
+      const response = await axiosInstance.get(`/plans`, { headers: getAuthHeaders(), withCredentials: true });
     } catch (error) {
       console.error('Error fetching plans:', error);
     }
@@ -55,7 +59,7 @@ const App = () => {
   const createSubscription = async (request) => {
     console.log("createSubscription", request, subscriptionPlanId);
     try {
-      const response = await axios.post(`${API_BASE_URL}/subscriptions`, request, { headers: getAuthHeaders(), withCredentials: true });
+      const response = await axiosInstance.post(`/subscriptions`, request, { headers: getAuthHeaders(), withCredentials: true });
       setResponse(response.data);
     } catch (error) {
       console.error('Error creating subscription:', error);
@@ -75,7 +79,7 @@ const App = () => {
     };
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/plans`, request, { headers: getAuthHeaders(), withCredentials: true });
+      const response = await axiosInstance.post(`/plans`, request, { headers: getAuthHeaders(), withCredentials: true });
       setResponse(response.data);
       setPlans([...plans, response.data]);
     } catch (error) {
@@ -85,7 +89,7 @@ const App = () => {
 
   const handleGetAllPlans = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/plans`, { headers: getAuthHeaders(), withCredentials: true });
+      const response = await axiosInstance.get(`/plans`, { headers: getAuthHeaders(), withCredentials: true });
     } catch (error) {
       console.error('Error getting all plans:', error);
     }
@@ -94,7 +98,7 @@ const App = () => {
   const handleGetMonthlyPayments = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.get(`${API_BASE_URL}/subscriptions/${monthlyPaymentsSubscriptionId}/payments`, { headers: getAuthHeaders(), withCredentials: true });
+      const response = await axiosInstance.get(`/subscriptions/${monthlyPaymentsSubscriptionId}/payments`, { headers: getAuthHeaders(), withCredentials: true });
       setResponse(response.data);
     } catch (error) {
       console.error('Error getting monthly payments:', error);
