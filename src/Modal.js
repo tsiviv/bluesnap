@@ -5,8 +5,12 @@ import axios from 'axios';
 
 const Modal = ({ isOpen, closeModal, children,subscriptionPlanId }) => {
 //   if (!isOpen) return null;
-  const API_BASE_URL = 'http://localhost:8080/api'; // Ensure this matches your server's address
-  const [hostedPaymentFieldsToken, setHostedPaymentFieldsToken] = useState('');
+const axiosInstance = axios.create({
+  baseURL: 'https://localhost:8443/api', // Replace with your server's base URL
+  timeout: 5000, // Timeout in milliseconds
+  withCredentials: true, // Include cookies in CORS requests
+  
+});const [hostedPaymentFieldsToken, setHostedPaymentFieldsToken] = useState('');
   const [exp,setexp]=useState("")
   const [isBluesnapLoaded, setIsBluesnapLoaded] = useState(false);
   const saveAuthDetailsToCookies = () => {
@@ -57,7 +61,7 @@ const Modal = ({ isOpen, closeModal, children,subscriptionPlanId }) => {
 
     try {
       // Step 1: Obtain the Hosted Payment Fields Token
-      const tokenResponse = await axios.post(`${API_BASE_URL}/token`, {}, { headers: getAuthHeaders() });
+      const tokenResponse = await axiosInstance.post(`/token`, {}, { headers: getAuthHeaders() });
       const locationHeader = tokenResponse.data.tokenLocation;
       const hostedFieldTokenId = locationHeader.split('/').pop();
       setHostedPaymentFieldsToken(hostedFieldTokenId);
